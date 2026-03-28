@@ -19,14 +19,40 @@ const NOTIFS_S = [
   { id:3, type:'confirm',  icon:'📋', text:'Tu entrenador actualizó tu rutina de la semana',   time:'Hace 4 días',  read:true  },
 ]
 
-function SessionModal({ onClose, onSave }) {
-  const [f, setF] = useState({ client: '', date: '', time: '', type: 'Fuerza', notes: '' })
+function SessionModal({ onClose, onSave, profile }) {
+  const [f, setF] = useState({ client: '', clientEmail: '', date: '', time: '', type: 'Fuerza', notes: '' })
+  const [sending, setSending] = useState(false)
   const s = k => e => setF(p => ({ ...p, [k]: e.target.value }))
   const isMobile = window.innerWidth <= 480
 
+  const handleSave = async () => {
+    setSending(true)
+    await onSave(f)
+    if (f.clientEmail) {
+      try {
+        await supabase.functions.invoke('send-session-email', {
+          body: {
+            studentEmail: f.clientEmail,
+            studentName: f.client,
+            trainerName: profile?.name || 'Tu entrenador',
+            date: f.date,
+            time: f.time,
+            type: f.type,
+            gymName: profile?.gym_name || 'ForgeGym',
+          }
+        })
+      } catch (e) { console.log('Email error:', e) }
+    }
+    setSending(false)
+    onClose()
+  }
+
   const content = (
     <>
-      <div className="fg"><label>Cliente (email o nombre)</label><input placeholder="cliente@mail.com" value={f.client} onChange={s('client')} /></div>
+      <div className="g2">
+        <div className="fg"><label>Nombre del alumno</label><input placeholder="Ej: Laura Torres" value={f.client} onChange={s('client')} /></div>
+        <div className="fg"><label>Email del alumno</label><input type="email" placeholder="alumno@mail.com" value={f.clientEmail} onChange={s('clientEmail')} /></div>
+      </div>
       <div className="g2">
         <div className="fg"><label>Fecha</label><input type="date" value={f.date} onChange={s('date')} /></div>
         <div className="fg"><label>Hora</label><input type="time" value={f.time} onChange={s('time')} /></div>
@@ -37,9 +63,16 @@ function SessionModal({ onClose, onSave }) {
         </select>
       </div>
       <div className="fg"><label>Notas</label><textarea placeholder="Indicaciones, objetivos..." value={f.notes} onChange={s('notes')} /></div>
-      <div style={{display:'flex',gap:10,marginTop:8}}>
-        <button className="btn btn-s" style={{flex:1}} onClick={onClose}>Cancelar</button>
-        <button className="btn btn-p" style={{flex:2}} onClick={() => { onSave(f); onClose() }}>Guardar sesión</button>
+      {f.clientEmail && (
+        <div style={{ background: 'var(--accent-light)', border: '1px solid #b8d4bf', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: 'var(--accent)', marginBottom: 8 }}>
+          ✉️ Se enviará confirmación a <strong>{f.clientEmail}</strong>
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+        <button className="btn btn-s" style={{ flex: 1 }} onClick={onClose} disabled={sending}>Cancelar</button>
+        <button className="btn btn-p" style={{ flex: 2 }} onClick={handleSave} disabled={sending}>
+          {sending ? 'Guardando...' : '✓ Guardar sesión'}
+        </button>
       </div>
     </>
   )
@@ -48,11 +81,9 @@ function SessionModal({ onClose, onSave }) {
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="sheet">
         <div className="sheet-handle" />
-        <div className="sheet-header">
-          <div className="sheet-title">Agendar Sesión</div>
-          <button className="sheet-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="sheet-body">{content}</div>
+        <div className="sheet-title">Agendar Sesión</div>
+        <div className="sheet-sub">Nueva sesión de entrenamiento</div>
+        {content}
       </div>
     </div>
   )
@@ -239,7 +270,7 @@ export default function App() {
         )}
       </nav>
 
-      {showSM  && <SessionModal onClose={() => setShowSM(false)} onSave={handleSaveSession} />}
+      {showSM  && <SessionModal onClose={() => setShowSM(false)} onSave={handleSaveSession} profile={profile} />}
       {toast   && <Toast msg={toast} onDone={() => setToast(null)} />}
     </div>
   )
