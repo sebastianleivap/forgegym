@@ -60,22 +60,28 @@ export default function App() {
   const [toast,    setToast]    = useState(null)
   const panelRef = useRef()
 
-  // ── Auth listener ──────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session: s } }) => {
       if (s) await loadProfile(s.user)
-      setLoading(false)
+      else setLoading(false)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, s) => {
       if (s) await loadProfile(s.user)
-      else { setSession(null); setProfile(null) }
+      else { setSession(null); setProfile(null); setLoading(false) }
     })
     return () => subscription.unsubscribe()
   }, [])
 
   const loadProfile = async (user) => {
     setSession(user)
-    const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+    const { data: p, error } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+    if (error || !p) {
+      await supabase.auth.signOut()
+      setSession(null)
+      setProfile(null)
+      setLoading(false)
+      return
+    }
     setProfile(p)
     if (p?.role === 'trainer' || p?.role === 'admin') {
       const { data: cls } = await supabase.from('profiles').select('*').eq('role', 'student')
@@ -84,6 +90,7 @@ export default function App() {
     } else {
       setNotifs(NOTIFS_S)
     }
+    setLoading(false)
   }
 
   const handleAuth = (user, prof) => {
@@ -104,14 +111,12 @@ export default function App() {
     setToast('Sesión agendada correctamente')
   }
 
-  // ── Close notif panel on outside click ──────────────────────────
   useEffect(() => {
     const h = e => { if (panelRef.current && !panelRef.current.contains(e.target)) setShowNP(false) }
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [])
 
-  // ── Loading / Auth gates ─────────────────────────────────────────
   if (loading) return <Spinner />
   if (!session || !profile) return <AuthScreen onAuth={handleAuth} />
 
@@ -121,11 +126,11 @@ export default function App() {
   const markAll   = () => setNotifs(n => n.map(x => ({ ...x, read: true })))
 
   const TRAINER_TABS = [
-    { id: 'dashboard',   l: 'Dashboard'    },
-    { id: 'alumnos',     l: 'Mis alumnos'  },
-    { id: 'planificador', l: 'Planificador' },
-    { id: 'agenda',      l: 'Agenda'       },
-    { id: 'notif',       l: 'Notificaciones' },
+    { id: 'dashboard',    l: 'Dashboard'      },
+    { id: 'alumnos',      l: 'Mis alumnos'    },
+    { id: 'planificador', l: 'Planificador'   },
+    { id: 'agenda',       l: 'Agenda'         },
+    { id: 'notif',        l: 'Notificaciones' },
   ]
   const STUDENT_TABS = [
     { id: 'dashboard', l: 'Inicio'          },
@@ -137,7 +142,6 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* ── NAV ── */}
       <nav className="nav">
         <div className="nav-logo" onClick={() => setPage('dashboard')}>Forge<span>Gym</span></div>
         <div className="nav-tabs">
@@ -163,24 +167,21 @@ export default function App() {
         </div>
       </nav>
 
-      {/* ── MAIN ── */}
       <main className="main">
-        {/* Trainer / Admin pages */}
         {isTrainer && page === 'dashboard'    && <TrainerDashboard profile={profile} onNewSession={() => setShowSM(true)} clients={clients} />}
         {isTrainer && page === 'alumnos'      && <TrainerClients clients={clients} />}
         {isTrainer && page === 'planificador' && <WorkoutPlanner profile={profile} clients={clients} />}
         {isTrainer && page === 'agenda'       && <TrainerSchedule onNew={() => setShowSM(true)} />}
         {isTrainer && page === 'notif'        && <NotifPage notifs={notifs} onMarkAll={markAll} />}
 
-        {/* Student pages */}
         {!isTrainer && page === 'dashboard' && <StudentDashboard profile={profile} workouts={workouts} />}
         {!isTrainer && page === 'progreso'  && <StudentProgress workouts={workouts} />}
         {!isTrainer && page === 'agenda'    && <StudentSchedule />}
         {!isTrainer && page === 'notif'     && <NotifPage notifs={notifs} onMarkAll={markAll} />}
       </main>
 
-      {showSM  && <SessionModal onClose={() => setShowSM(false)} onSave={handleSaveSession} />}
-      {toast   && <Toast msg={toast} onDone={() => setToast(null)} />}
+      {showSM && <SessionModal onClose={() => setShowSM(false)} onSave={handleSaveSession} />}
+      {toast  && <Toast msg={toast} onDone={() => setToast(null)} />}
     </div>
   )
 }
