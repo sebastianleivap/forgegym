@@ -212,6 +212,8 @@ export function StudentDashboard({ profile, workouts, onNavigate }) {
     </div>
   )
 }
+
+export function StudentProgress({ workouts }) {
   const [tab, setTab] = useState('charts')
   const data = workouts.length ? workouts : DEMO_WORKOUTS
 
