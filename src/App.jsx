@@ -153,8 +153,20 @@ export default function App() {
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    setSession(null); setProfile(null); setPage('dashboard')
+    try {
+      await supabase.auth.signOut()
+    } catch (e) {
+      console.log('signout error:', e)
+    }
+    // Limpiar estado local siempre, incluso si falla el signOut
+    setSession(null)
+    setProfile(null)
+    setPage('dashboard')
+    setClients([])
+    setWorkouts([])
+    setNotifs([])
+    // Forzar recarga para limpiar caché del service worker en Safari
+    window.location.href = '/'
   }
 
   const handleSaveSession = async (form) => {
