@@ -50,34 +50,40 @@ function ClickableStat({ label, value, sub, color, onClick }) {
 function SharedCalendar({ trainers }) {
   const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
   const hours = ['6:00', '7:00', '8:00', '9:00', '10:00', '11:00', '12:00', '17:00', '18:00', '19:00']
-  const MAX_CAPACITY = 3 // máx alumnos por bloque
+  const MAX_CAPACITY = 3
+  const [selected, setSelected] = useState(null) // { day, hour, evts }
 
-  // Datos demo del calendario compartido
+  // Datos demo con alumnos por bloque
   const events = [
-    { day: 0, hour: '6:00',  trainer: 'Carlos',  count: 2, color: TRAINER_COLORS[0] },
-    { day: 0, hour: '7:00',  trainer: 'Carlos',  count: 3, color: TRAINER_COLORS[0] },
-    { day: 0, hour: '7:00',  trainer: 'Sofía',   count: 1, color: TRAINER_COLORS[1] },
-    { day: 0, hour: '9:00',  trainer: 'Andrés',  count: 2, color: TRAINER_COLORS[2] },
-    { day: 1, hour: '6:00',  trainer: 'Sofía',   count: 3, color: TRAINER_COLORS[1] },
-    { day: 1, hour: '8:00',  trainer: 'Carlos',  count: 1, color: TRAINER_COLORS[0] },
-    { day: 1, hour: '18:00', trainer: 'Andrés',  count: 2, color: TRAINER_COLORS[2] },
-    { day: 2, hour: '7:00',  trainer: 'Carlos',  count: 2, color: TRAINER_COLORS[0] },
-    { day: 2, hour: '7:00',  trainer: 'Sofía',   count: 2, color: TRAINER_COLORS[1] },
-    { day: 2, hour: '10:00', trainer: 'Andrés',  count: 1, color: TRAINER_COLORS[2] },
-    { day: 3, hour: '6:00',  trainer: 'Carlos',  count: 3, color: TRAINER_COLORS[0] },
-    { day: 3, hour: '17:00', trainer: 'Sofía',   count: 2, color: TRAINER_COLORS[1] },
-    { day: 4, hour: '8:00',  trainer: 'Carlos',  count: 2, color: TRAINER_COLORS[0] },
-    { day: 4, hour: '9:00',  trainer: 'Andrés',  count: 3, color: TRAINER_COLORS[2] },
-    { day: 5, hour: '10:00', trainer: 'Sofía',   count: 1, color: TRAINER_COLORS[1] },
+    { day: 0, hour: '6:00',  trainer: 'Carlos',  color: TRAINER_COLORS[0], students: ['María González', 'José Pérez'] },
+    { day: 0, hour: '7:00',  trainer: 'Carlos',  color: TRAINER_COLORS[0], students: ['Laura Torres', 'Diego Muñoz', 'Ana Soto'] },
+    { day: 0, hour: '7:00',  trainer: 'Sofía',   color: TRAINER_COLORS[1], students: ['Roberto Vega'] },
+    { day: 0, hour: '9:00',  trainer: 'Andrés',  color: TRAINER_COLORS[2], students: ['Paula Rojas', 'Felipe Castro'] },
+    { day: 1, hour: '6:00',  trainer: 'Sofía',   color: TRAINER_COLORS[1], students: ['Carmen López', 'Ignacio Díaz', 'Valentina Ruiz'] },
+    { day: 1, hour: '8:00',  trainer: 'Carlos',  color: TRAINER_COLORS[0], students: ['Daniela Ríos'] },
+    { day: 1, hour: '18:00', trainer: 'Andrés',  color: TRAINER_COLORS[2], students: ['Marcos Silva', 'Valeria Soto'] },
+    { day: 2, hour: '7:00',  trainer: 'Carlos',  color: TRAINER_COLORS[0], students: ['Laura Torres', 'Pedro Navarro'] },
+    { day: 2, hour: '7:00',  trainer: 'Sofía',   color: TRAINER_COLORS[1], students: ['Carmen López', 'Roberto Vega'] },
+    { day: 2, hour: '10:00', trainer: 'Andrés',  color: TRAINER_COLORS[2], students: ['Felipe Castro'] },
+    { day: 3, hour: '6:00',  trainer: 'Carlos',  color: TRAINER_COLORS[0], students: ['María González', 'José Pérez', 'Ana Soto'] },
+    { day: 3, hour: '17:00', trainer: 'Sofía',   color: TRAINER_COLORS[1], students: ['Valentina Ruiz', 'Ignacio Díaz'] },
+    { day: 4, hour: '8:00',  trainer: 'Carlos',  color: TRAINER_COLORS[0], students: ['Diego Muñoz', 'Daniela Ríos'] },
+    { day: 4, hour: '9:00',  trainer: 'Andrés',  color: TRAINER_COLORS[2], students: ['Paula Rojas', 'Marcos Silva', 'Felipe Castro'] },
+    { day: 5, hour: '10:00', trainer: 'Sofía',   color: TRAINER_COLORS[1], students: ['Valeria Soto'] },
   ]
 
   const getEvents = (day, hour) => events.filter(e => e.day === day && e.hour === hour)
-  const getTotalCount = (day, hour) => getEvents(day, hour).reduce((a, e) => a + e.count, 0)
-  const isFull = (day, hour) => getTotalCount(day, hour) >= MAX_CAPACITY
+  const getTotalStudents = (day, hour) => getEvents(day, hour).reduce((a, e) => a + e.students.length, 0)
+  const isFull = (day, hour) => getTotalStudents(day, hour) >= MAX_CAPACITY
+
+  const handleBlockClick = (di, hour) => {
+    const evts = getEvents(di, hour)
+    if (evts.length > 0) setSelected({ day: days[di], hour, evts })
+  }
 
   return (
     <div>
-      {/* Leyenda de entrenadores */}
+      {/* Leyenda */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
         {['Carlos', 'Sofía', 'Andrés'].map((t, i) => (
           <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
@@ -90,13 +96,14 @@ function SharedCalendar({ trainers }) {
           <span style={{ color: 'var(--danger)' }}>Lleno ({MAX_CAPACITY}/{MAX_CAPACITY})</span>
         </div>
       </div>
+      <p style={{ fontSize: 12, color: 'var(--ink2)', marginBottom: 12 }}>💡 Toca cualquier bloque ocupado para ver los alumnos agendados</p>
 
-      {/* Grid del calendario */}
+      {/* Grid */}
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
           <thead>
             <tr>
-              <th style={{ width: 60, padding: '8px', fontSize: 11, color: 'var(--ink2)', textAlign: 'right', paddingRight: 12 }}>Hora</th>
+              <th style={{ width: 60, padding: '8px 12px 8px 0', fontSize: 11, color: 'var(--ink2)', textAlign: 'right' }}>Hora</th>
               {days.map(d => (
                 <th key={d} style={{ padding: '8px 4px', fontSize: 12, fontWeight: 600, color: 'var(--ink)', textAlign: 'center' }}>{d}</th>
               ))}
@@ -109,11 +116,21 @@ function SharedCalendar({ trainers }) {
                 {days.map((d, di) => {
                   const evts = getEvents(di, hour)
                   const full = isFull(di, hour)
-                  const total = getTotalCount(di, hour)
+                  const total = getTotalStudents(di, hour)
+                  const hasEvents = evts.length > 0
                   return (
                     <td key={di} style={{ padding: '3px', borderTop: '1px solid var(--border)', verticalAlign: 'top', minWidth: 70 }}>
-                      {evts.length > 0 ? (
-                        <div style={{ background: full ? '#fbeaea' : 'var(--surface2)', border: `1px solid ${full ? '#f5c6c6' : 'var(--border)'}`, borderRadius: 6, padding: '4px 6px', fontSize: 10 }}>
+                      {hasEvents ? (
+                        <div
+                          onClick={() => handleBlockClick(di, hour)}
+                          style={{
+                            background: full ? '#fbeaea' : 'var(--surface2)',
+                            border: `1px solid ${full ? '#f5c6c6' : 'var(--border)'}`,
+                            borderRadius: 6, padding: '4px 6px', fontSize: 10,
+                            cursor: 'pointer', transition: 'all .15s',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.transform = 'scale(1.03)' }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = full ? '#f5c6c6' : 'var(--border)'; e.currentTarget.style.transform = '' }}>
                           <div style={{ display: 'flex', gap: 3, marginBottom: 3, flexWrap: 'wrap' }}>
                             {evts.map((e, ei) => (
                               <div key={ei} style={{ width: 8, height: 8, borderRadius: '50%', background: e.color }} title={e.trainer} />
@@ -124,9 +141,7 @@ function SharedCalendar({ trainers }) {
                           </div>
                         </div>
                       ) : (
-                        <div style={{ background: 'transparent', border: '1px dashed transparent', borderRadius: 6, padding: '4px 6px', fontSize: 10, color: 'var(--accent)', fontWeight: 500 }}>
-                          libre
-                        </div>
+                        <div style={{ padding: '4px 6px', fontSize: 10, color: 'var(--accent)', opacity: 0.5 }}>libre</div>
                       )}
                     </td>
                   )
@@ -137,8 +152,50 @@ function SharedCalendar({ trainers }) {
         </table>
       </div>
       <p style={{ fontSize: 11, color: 'var(--ink2)', marginTop: 12 }}>
-        * Capacidad máxima: {MAX_CAPACITY} alumnos por bloque horario. Los bloques en rojo están llenos.
+        * Capacidad máxima: {MAX_CAPACITY} alumnos por bloque horario.
       </p>
+
+      {/* Popup de alumnos del bloque */}
+      {selected && (
+        <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && setSelected(null)}>
+          <div className="sheet">
+            <div className="sheet-handle" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div>
+                <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20 }}>
+                  {selected.day} · {selected.hour}
+                </h2>
+                <p style={{ fontSize: 13, color: 'var(--ink2)', marginTop: 2 }}>
+                  {selected.evts.reduce((a, e) => a + e.students.length, 0)} alumnos agendados
+                </p>
+              </div>
+              <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--ink2)' }}>✕</button>
+            </div>
+
+            {selected.evts.map((evt, ei) => (
+              <div key={ei} style={{ marginBottom: ei < selected.evts.length - 1 ? 20 : 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: evt.color }} />
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>{evt.trainer}</span>
+                  <span className="chip" style={{ fontSize: 11 }}>{evt.students.length} alumno{evt.students.length !== 1 ? 's' : ''}</span>
+                </div>
+                {evt.students.map((s, si) => (
+                  <div key={si} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--surface2)', borderRadius: 10, marginBottom: 6 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: evt.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'white', flexShrink: 0 }}>
+                      {s.split(' ').map(w => w[0]).join('').slice(0, 2)}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 500 }}>{s}</div>
+                      <div style={{ fontSize: 11, color: 'var(--ink2)' }}>Sesión confirmada · 60 min</div>
+                    </div>
+                    <span className="sbadge ok">✓</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
