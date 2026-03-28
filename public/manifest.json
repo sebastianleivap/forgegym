@@ -1,0 +1,18 @@
+{
+  "name": "ForgeGym",
+  "short_name": "ForgeGym",
+  "description": "Plataforma de gestión para gimnasios",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f5f2",
+  "theme_color": "#2d5a3d",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
