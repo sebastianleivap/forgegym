@@ -22,26 +22,47 @@ const NOTIFS_S = [
 function SessionModal({ onClose, onSave }) {
   const [f, setF] = useState({ client: '', date: '', time: '', type: 'Fuerza', notes: '' })
   const s = k => e => setF(p => ({ ...p, [k]: e.target.value }))
+  const isMobile = window.innerWidth <= 480
+
+  const content = (
+    <>
+      <div className="fg"><label>Cliente (email o nombre)</label><input placeholder="cliente@mail.com" value={f.client} onChange={s('client')} /></div>
+      <div className="g2">
+        <div className="fg"><label>Fecha</label><input type="date" value={f.date} onChange={s('date')} /></div>
+        <div className="fg"><label>Hora</label><input type="time" value={f.time} onChange={s('time')} /></div>
+      </div>
+      <div className="fg"><label>Tipo de sesión</label>
+        <select value={f.type} onChange={s('type')}>
+          {['Fuerza','HIIT','Yoga','Cardio','Funcional','Stretching'].map(t => <option key={t}>{t}</option>)}
+        </select>
+      </div>
+      <div className="fg"><label>Notas</label><textarea placeholder="Indicaciones, objetivos..." value={f.notes} onChange={s('notes')} /></div>
+      <div style={{display:'flex',gap:10,marginTop:8}}>
+        <button className="btn btn-s" style={{flex:1}} onClick={onClose}>Cancelar</button>
+        <button className="btn btn-p" style={{flex:2}} onClick={() => { onSave(f); onClose() }}>Guardar sesión</button>
+      </div>
+    </>
+  )
+
+  if (isMobile) return (
+    <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="sheet">
+        <div className="sheet-handle" />
+        <div className="sheet-header">
+          <div className="sheet-title">Agendar Sesión</div>
+          <button className="sheet-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="sheet-body">{content}</div>
+      </div>
+    </div>
+  )
+
   return (
     <div className="modal-ov" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-title">Agendar Sesión</div>
         <div className="modal-sub">Nueva sesión de entrenamiento</div>
-        <div className="fg"><label>Cliente (email o nombre)</label><input placeholder="cliente@mail.com" value={f.client} onChange={s('client')} /></div>
-        <div className="g2">
-          <div className="fg"><label>Fecha</label><input type="date" value={f.date} onChange={s('date')} /></div>
-          <div className="fg"><label>Hora</label><input type="time" value={f.time} onChange={s('time')} /></div>
-        </div>
-        <div className="fg"><label>Tipo</label>
-          <select value={f.type} onChange={s('type')}>
-            {['Fuerza','HIIT','Yoga','Cardio','Funcional','Stretching'].map(t => <option key={t}>{t}</option>)}
-          </select>
-        </div>
-        <div className="fg"><label>Notas</label><textarea placeholder="Indicaciones, objetivos..." value={f.notes} onChange={s('notes')} /></div>
-        <div className="modal-actions">
-          <button className="btn btn-s" onClick={onClose}>Cancelar</button>
-          <button className="btn btn-p" onClick={() => { onSave(f); onClose() }}>Guardar sesión</button>
-        </div>
+        {content}
       </div>
     </div>
   )
@@ -192,18 +213,28 @@ export default function App() {
       <nav className="bottom-nav">
         {isTrainer ? (
           <>
-            <button className={`bottom-nav-item ${page==='dashboard'?'active':''}`} onClick={()=>setPage('dashboard')}><span className="icon">🏠</span>Inicio</button>
-            <button className={`bottom-nav-item ${page==='alumnos'?'active':''}`} onClick={()=>setPage('alumnos')}><span className="icon">👥</span>Alumnos</button>
-            <button className={`bottom-nav-item ${page==='planificador'?'active':''}`} onClick={()=>setPage('planificador')}><span className="icon">📋</span>Rutinas</button>
-            <button className={`bottom-nav-item ${page==='agenda'?'active':''}`} onClick={()=>setPage('agenda')}><span className="icon">📅</span>Agenda</button>
-            <button className={`bottom-nav-item ${page==='notif'?'active':''}`} onClick={()=>setPage('notif')}><span className="icon">{unread>0?'🔴':'🔔'}</span>Alertas</button>
+            <button className={`bottom-nav-item ${page==='dashboard'?'active':''}`} onClick={()=>setPage('dashboard')}><span className="bn-icon">🏠</span>Inicio</button>
+            <button className={`bottom-nav-item ${page==='alumnos'?'active':''}`} onClick={()=>setPage('alumnos')}><span className="bn-icon">👥</span>Alumnos</button>
+            <button className={`bottom-nav-item ${page==='planificador'?'active':''}`} onClick={()=>setPage('planificador')}><span className="bn-icon">📋</span>Rutinas</button>
+            <button className={`bottom-nav-item ${page==='agenda'?'active':''}`} onClick={()=>setPage('agenda')}><span className="bn-icon">📅</span>Agenda</button>
+            <button className={`bottom-nav-item ${page==='notif'?'active':''}`} onClick={()=>setPage('notif')}>
+              <span className="bn-icon" style={{position:'relative'}}>
+                🔔{unread>0&&<span style={{position:'absolute',top:-4,right:-4,width:8,height:8,background:'#e07b8a',borderRadius:'50%'}}/>}
+              </span>
+              Alertas
+            </button>
           </>
         ) : (
           <>
-            <button className={`bottom-nav-item ${page==='dashboard'?'active':''}`} onClick={()=>setPage('dashboard')}><span className="icon">🏠</span>Inicio</button>
-            <button className={`bottom-nav-item ${page==='progreso'?'active':''}`} onClick={()=>setPage('progreso')}><span className="icon">📈</span>Progreso</button>
-            <button className={`bottom-nav-item ${page==='agenda'?'active':''}`} onClick={()=>setPage('agenda')}><span className="icon">📅</span>Agenda</button>
-            <button className={`bottom-nav-item ${page==='notif'?'active':''}`} onClick={()=>setPage('notif')}><span className="icon">{unread>0?'🔴':'🔔'}</span>Alertas</button>
+            <button className={`bottom-nav-item ${page==='dashboard'?'active':''}`} onClick={()=>setPage('dashboard')}><span className="bn-icon">🏠</span>Inicio</button>
+            <button className={`bottom-nav-item ${page==='progreso'?'active':''}`} onClick={()=>setPage('progreso')}><span className="bn-icon">📈</span>Progreso</button>
+            <button className={`bottom-nav-item ${page==='agenda'?'active':''}`} onClick={()=>setPage('agenda')}><span className="bn-icon">📅</span>Agenda</button>
+            <button className={`bottom-nav-item ${page==='notif'?'active':''}`} onClick={()=>setPage('notif')}>
+              <span className="bn-icon" style={{position:'relative'}}>
+                🔔{unread>0&&<span style={{position:'absolute',top:-4,right:-4,width:8,height:8,background:'#e07b8a',borderRadius:'50%'}}/>}
+              </span>
+              Alertas
+            </button>
           </>
         )}
       </nav>
