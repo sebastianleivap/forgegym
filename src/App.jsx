@@ -196,14 +196,14 @@ export default function App() {
       {/* ── MAIN ── */}
       <main className="main">
         {/* Trainer / Admin pages */}
-        {isTrainer && page === 'dashboard'    && <TrainerDashboard profile={profile} onNewSession={() => setShowSM(true)} clients={clients} />}
+        {isTrainer && page === 'dashboard'    && <TrainerDashboard profile={profile} onNewSession={() => setShowSM(true)} clients={clients} onNavigate={setPage} />}
         {isTrainer && page === 'alumnos'      && <TrainerClients clients={clients} />}
         {isTrainer && page === 'planificador' && <WorkoutPlanner profile={profile} clients={clients} />}
         {isTrainer && page === 'agenda'       && <TrainerSchedule onNew={() => setShowSM(true)} />}
         {isTrainer && page === 'notif'        && <NotifPage notifs={notifs} onMarkAll={markAll} />}
 
         {/* Student pages */}
-        {!isTrainer && page === 'dashboard' && <StudentDashboard profile={profile} workouts={workouts} />}
+        {!isTrainer && page === 'dashboard' && <StudentDashboard profile={profile} workouts={workouts} onNavigate={setPage} />}
         {!isTrainer && page === 'progreso'  && <StudentProgress workouts={workouts} />}
         {!isTrainer && page === 'agenda'    && <StudentSchedule />}
         {!isTrainer && page === 'notif'     && <NotifPage notifs={notifs} onMarkAll={markAll} />}
