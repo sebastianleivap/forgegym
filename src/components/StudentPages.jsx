@@ -43,7 +43,8 @@ const CustomTooltip = ({ active, payload, label }) => {
   )
 }
 
-export function StudentDashboard({ profile, workouts }) {
+export function StudentDashboard({ profile, workouts, onNavigate }) {
+  const [modal, setModal] = useState(null)
   const data = workouts.length ? workouts : DEMO_WORKOUTS
   const totalKg = data.reduce((a, w) => a + w.kg, 0)
   const goals = [
@@ -67,11 +68,24 @@ export function StudentDashboard({ profile, workouts }) {
         <div><div className="cval">14h</div><div className="clabel">para tu sesión</div></div>
       </div>
 
+      {/* Stats clickeables */}
       <div className="g4" style={{ marginBottom: 24 }}>
-        <div className="sc"><div className="sc-label">Sesiones totales</div><div className="sc-val">{data.length}</div><div className="sc-sub">completadas</div></div>
-        <div className="sc gold"><div className="sc-label">Este mes</div><div className="sc-val">{data.slice(0,3).length}</div><div className="sc-sub">sesiones</div></div>
-        <div className="sc blue"><div className="sc-label">Racha actual</div><div className="sc-val">5</div><div className="sc-sub">semanas seguidas</div></div>
-        <div className="sc red"><div className="sc-label">Total levantado</div><div className="sc-val">{(totalKg/1000).toFixed(1)}t</div><div className="sc-sub">acumulado</div></div>
+        {[
+          { label: 'Sesiones totales', value: data.length, sub: 'completadas', color: '', modal: 'historial' },
+          { label: 'Este mes', value: data.slice(0,3).length, sub: 'sesiones', color: 'gold', modal: 'mes' },
+          { label: 'Racha actual', value: 5, sub: 'semanas seguidas', color: 'blue', modal: 'racha' },
+          { label: 'Total levantado', value: `${(totalKg/1000).toFixed(1)}t`, sub: 'acumulado', color: 'red', modal: 'pesos' },
+        ].map(s => (
+          <div key={s.modal} className={`sc ${s.color}`} onClick={() => setModal(s.modal)}
+            style={{ cursor: 'pointer', transition: 'transform .15s, box-shadow .15s' }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--sh-lg)' }}
+            onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
+            <div className="sc-label">{s.label}</div>
+            <div className="sc-val">{s.value}</div>
+            <div className="sc-sub">{s.sub}</div>
+            <div style={{ fontSize: 10, color: 'var(--accent)', marginTop: 6, fontWeight: 600 }}>Ver detalle →</div>
+          </div>
+        ))}
       </div>
 
       {/* Volume chart */}
@@ -115,11 +129,89 @@ export function StudentDashboard({ profile, workouts }) {
           ))}
         </div>
       </div>
+
+      {/* ── Modales de detalle ── */}
+      {modal && (
+        <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && setModal(null)}>
+          <div className="sheet" style={{ maxHeight: '85vh' }}>
+            <div className="sheet-handle" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20 }}>
+                {modal === 'historial' && 'Historial completo'}
+                {modal === 'mes' && 'Sesiones de este mes'}
+                {modal === 'racha' && 'Tu racha de actividad'}
+                {modal === 'pesos' && 'Detalle de peso levantado'}
+              </h2>
+              <button onClick={() => setModal(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--ink2)' }}>✕</button>
+            </div>
+
+            {(modal === 'historial' || modal === 'mes') && (
+              <div>
+                {data.slice(0, modal === 'mes' ? 3 : data.length).map((w, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderBottom: i < data.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🏋️</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 500 }}>{w.type}</div>
+                      <div style={{ fontSize: 12, color: 'var(--ink2)' }}>{w.date} · {w.duration} · {w.exercises} ejercicios</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--accent)' }}>{w.kg}kg</div>
+                      <span className="tag tg" style={{ fontSize: 10 }}>Completado</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {modal === 'racha' && (
+              <div>
+                <div style={{ textAlign: 'center', padding: '20px 0 28px' }}>
+                  <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 56, color: 'var(--accent)' }}>5</div>
+                  <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 4 }}>semanas consecutivas</div>
+                  <div style={{ fontSize: 13, color: 'var(--ink2)' }}>¡Sigue así! Estás en tu mejor racha</div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 6, marginBottom: 16 }}>
+                  {['L','M','X','J','V','S','D'].map((d, i) => (
+                    <div key={d} style={{ textAlign: 'center', fontSize: 11, color: 'var(--ink2)', marginBottom: 4 }}>{d}</div>
+                  ))}
+                  {Array.from({ length: 28 }).map((_, i) => {
+                    const active = [1,3,5,8,10,12,15,17,19,22,24,26].includes(i)
+                    return (
+                      <div key={i} style={{ width: '100%', aspectRatio: '1', borderRadius: 4, background: active ? 'var(--accent)' : 'var(--surface2)', border: '1px solid var(--border)' }} />
+                    )
+                  })}
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--ink2)', textAlign: 'center' }}>Últimas 4 semanas · Verde = día activo</p>
+              </div>
+            )}
+
+            {modal === 'pesos' && (
+              <div>
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 36, color: 'var(--accent)', textAlign: 'center' }}>{(totalKg/1000).toFixed(2)} toneladas</div>
+                  <p style={{ textAlign: 'center', color: 'var(--ink2)', fontSize: 13 }}>levantadas en total desde que empezaste</p>
+                </div>
+                {DEMO_PRS.map((ex, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderBottom: i < DEMO_PRS.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                    <span style={{ fontSize: 24 }}>{ex.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 500 }}>{ex.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--accent)', marginTop: 2 }}>↑ {ex.trend}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--accent)' }}>{ex.pr}</div>
+                      <div style={{ fontSize: 10, color: 'var(--ink2)' }}>PR actual</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-
-export function StudentProgress({ workouts }) {
   const [tab, setTab] = useState('charts')
   const data = workouts.length ? workouts : DEMO_WORKOUTS
 
