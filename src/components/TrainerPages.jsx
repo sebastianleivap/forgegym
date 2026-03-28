@@ -203,7 +203,7 @@ function SharedCalendar({ trainers }) {
 // ── Dashboard del entrenador ──
 export function TrainerDashboard({ profile, onNewSession, clients, onNavigate }) {
   const [modal, setModal] = useState(null)
-  const today = new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' })
+  const today = new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
   return (
     <div className="page">
@@ -395,14 +395,29 @@ export function TrainerClients({ clients }) {
 }
 
 export function TrainerSchedule({ onNew }) {
-  const [view, setView] = useState('personal') // 'personal' | 'shared'
-  const days = ['Lun 28', 'Mar 29', 'Mié 30', 'Jue 31', 'Vie 1']
+  const [view, setView] = useState('personal')
   const [day, setDay] = useState(0)
+
+  // Generar días reales de la semana actual
+  const today = new Date()
+  const monday = new Date(today)
+  monday.setDate(today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1))
+  const weekDays = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    const names = ['Lun','Mar','Mié','Jue','Vie','Sáb']
+    return {
+      label: `${names[i]} ${d.getDate()}`,
+      full: d.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' }),
+      date: d,
+    }
+  })
+  const monthYear = weekDays[day].date.toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })
 
   return (
     <div className="page">
       <div className="sh-row">
-        <div className="sh-row-left"><h1>Agenda</h1><p>Semana 28 Ene – 1 Feb</p></div>
+        <div className="sh-row-left"><h1>Agenda</h1><p style={{ textTransform: 'capitalize' }}>{weekDays[0].date.toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })}</p></div>
         <button className="btn btn-p" onClick={onNew}>+ Agendar</button>
       </div>
 
@@ -419,13 +434,13 @@ export function TrainerSchedule({ onNew }) {
       {view === 'personal' && (
         <>
           <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
-            {days.map((d, i) => (
-              <button key={d} onClick={() => setDay(i)} className={`btn ${day === i ? 'btn-p' : 'btn-s'}`} style={{ flex: 1, borderRadius: 10, fontSize: 13 }}>{d}</button>
+            {weekDays.map((d, i) => (
+              <button key={i} onClick={() => setDay(i)} className={`btn ${day === i ? 'btn-p' : 'btn-s'}`} style={{ flex: 1, borderRadius: 10, fontSize: 13 }}>{d.label}</button>
             ))}
           </div>
           <div className="card cp">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20, alignItems: 'center' }}>
-              <h2 className="card-title" style={{ marginBottom: 0 }}>{days[day]} · Enero 2025</h2>
+              <h2 className="card-title" style={{ marginBottom: 0, textTransform: 'capitalize' }}>{weekDays[day].full}</h2>
               <div style={{ display: 'flex', gap: 8 }}><span className="tag tg">4 sesiones</span><span className="tag ty">1 pendiente</span></div>
             </div>
             <div className="sg">
