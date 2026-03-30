@@ -28,20 +28,25 @@ function SessionModal({ onClose, onSave, profile }) {
   const handleSave = async () => {
     setSending(true)
     await onSave(f)
+    // Enviar correo si hay email del alumno
     if (f.clientEmail) {
       try {
-        await supabase.functions.invoke('send-session-email', {
+        // Intentar con Edge Function primero
+        const { error } = await supabase.functions.invoke('send-session-email', {
           body: {
             studentEmail: f.clientEmail,
-            studentName: f.client,
+            studentName: f.client || f.clientEmail,
             trainerName: profile?.name || 'Tu entrenador',
-            date: f.date,
+            date: f.date ? new Date(f.date + 'T12:00:00').toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' }) : f.date,
             time: f.time,
             type: f.type,
             gymName: profile?.gym_name || 'ForgeGym',
           }
         })
-      } catch (e) { console.log('Email error:', e) }
+        if (error) console.log('Edge function error:', error)
+      } catch (e) {
+        console.log('Email no enviado:', e)
+      }
     }
     setSending(false)
     onClose()
@@ -107,6 +112,7 @@ export default function App() {
   const [notifs,   setNotifs]   = useState([])
   const [clients,  setClients]  = useState([])
   const [workouts, setWorkouts] = useState([])
+  const [sessions,  setSessions]  = useState([])
   const [showNP,   setShowNP]   = useState(false)
   const [showSM,   setShowSM]   = useState(false)
   const [toast,    setToast]    = useState(null)
@@ -140,6 +146,9 @@ export default function App() {
     if (p?.role === 'trainer' || p?.role === 'admin') {
       const { data: cls } = await supabase.from('profiles').select('*').eq('role', 'student')
       setClients(cls || [])
+      // Cargar sesiones reales
+      const { data: sess } = await supabase.from('sessions').select('*').eq('trainer_id', user.id).order('date', { ascending: true })
+      setSessions(sess || [])
       setNotifs(NOTIFS_T)
     } else {
       setNotifs(NOTIFS_S)
@@ -170,11 +179,32 @@ export default function App() {
   }
 
   const handleSaveSession = async (form) => {
-    await supabase.from('sessions').insert({
-      trainer_id: session.id, client_email: form.client,
-      date: form.date, time: form.time, type: form.type, notes: form.notes,
+    // Guardar sesión en Supabase
+    const { error } = await supabase.from('sessions').insert({
+      trainer_id: session.id,
+      client_email: form.clientEmail || form.client,
+      date: form.date,
+      time: form.time,
+      type: form.type,
+      notes: form.notes,
+      status: 'confirmed',
     })
-    setToast('Sesión agendada correctamente')
+    if (error) {
+      setToast('Error al guardar la sesión')
+      return
+    }
+    // Recargar sesiones para actualizar el calendario
+    await loadSessions()
+    setToast('Sesión agendada correctamente ✓')
+  }
+
+  const loadSessions = async () => {
+    const { data } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('trainer_id', session.id)
+      .order('date', { ascending: true })
+    setSessions(data || [])
   }
 
   // ── Close notif panel on outside click ──────────────────────────
@@ -242,7 +272,7 @@ export default function App() {
         {isTrainer && page === 'dashboard'    && <TrainerDashboard profile={profile} onNewSession={() => setShowSM(true)} clients={clients} onNavigate={setPage} />}
         {isTrainer && page === 'alumnos'      && <TrainerClients clients={clients} />}
         {isTrainer && page === 'planificador' && <WorkoutPlanner profile={profile} clients={clients} />}
-        {isTrainer && page === 'agenda'       && <TrainerSchedule onNew={() => setShowSM(true)} />}
+        {isTrainer && page === 'agenda'       && <TrainerSchedule onNew={() => setShowSM(true)} sessions={sessions} />}
         {isTrainer && page === 'notif'        && <NotifPage notifs={notifs} onMarkAll={markAll} />}
 
         {/* Student pages */}
