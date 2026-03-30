@@ -69,15 +69,27 @@ export default function AuthScreen({ onAuth }) {
     }
     if (!data.user) { setLoading(false); setError('No se pudo crear la cuenta.'); return }
 
+    // Si es admin, crear gymansio automáticamente con código único
+    let finalGymId = gymId
+    if (role === 'admin') {
+      const code = name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) + Math.floor(Math.random() * 900 + 100)
+      const { data: gym, error: gymErr } = await supabase.from('gyms').insert({
+        name: name.trim(),
+        invite_code: code,
+        owner_id: data.user.id,
+      }).select().single()
+      if (gym) finalGymId = gym.id
+    }
+
     const { error: insErr } = await supabase.from('profiles').insert({
       id: data.user.id, name: name.trim(),
       email: email.trim().toLowerCase(),
-      role, gym_id: gymId,
+      role, gym_id: finalGymId,
     })
     setLoading(false)
     if (insErr) { setError('Error al guardar perfil: ' + insErr.message); return }
     if (data.session) {
-      onAuth(data.user, { id: data.user.id, name: name.trim(), email, role, gym_id: gymId })
+      onAuth(data.user, { id: data.user.id, name: name.trim(), email, role, gym_id: finalGymId })
       return
     }
     setSuccess('¡Cuenta creada! Ahora inicia sesión.')
