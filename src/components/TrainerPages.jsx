@@ -201,9 +201,26 @@ function SharedCalendar({ trainers }) {
 }
 
 // ── Dashboard del entrenador ──
-export function TrainerDashboard({ profile, onNewSession, clients, onNavigate }) {
+const DEMO_EMAIL = ['demo.gimnasio@forgegym.cl', 'demo.entrenador@forgegym.cl', 'demo.alumno@forgegym.cl']
+const isDemo = (email) => DEMO_EMAIL.includes(email)
+
+export function TrainerDashboard({ profile, onNewSession, clients, onNavigate, sessions = [] }) {
   const [modal, setModal] = useState(null)
   const today = new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const demo = isDemo(profile?.email)
+
+  // Sesiones de hoy (reales)
+  const todayStr = new Date().toISOString().split('T')[0]
+  const todaySessions = sessions.filter(s => s.date === todayStr)
+  const weekSessions = sessions.filter(s => {
+    const d = new Date(s.date)
+    const now = new Date()
+    const monday = new Date(now)
+    monday.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1))
+    const sunday = new Date(monday)
+    sunday.setDate(monday.getDate() + 6)
+    return d >= monday && d <= sunday
+  })
 
   return (
     <div className="page">
@@ -215,44 +232,88 @@ export function TrainerDashboard({ profile, onNewSession, clients, onNavigate })
         <button className="btn btn-p" onClick={onNewSession}>+ Nueva sesión</button>
       </div>
 
+      {/* Código del gimnasio — solo para admin/gimnasio */}
+      {profile?.role === 'admin' && (
+        <div style={{ background: 'var(--accent)', color: 'white', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Código de invitación de tu gimnasio</div>
+            <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, letterSpacing: 4 }}>
+              {profile?.gym_invite_code || 'Cargando...'}
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>Comparte este código con tus entrenadores y alumnos al registrarse</div>
+          </div>
+          <button
+            onClick={() => { navigator.clipboard.writeText(profile?.gym_invite_code || ''); alert('Código copiado') }}
+            style={{ background: 'white', color: 'var(--accent)', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+            📋 Copiar
+          </button>
+        </div>
+      )}
+
       {/* Stats clickeables */}
       <div className="g4" style={{ marginBottom: 24 }}>
-        <ClickableStat label="Sesiones hoy" value="4" sub="3 confirmadas · 1 pendiente"
+        <ClickableStat label="Sesiones hoy" value={demo ? 4 : todaySessions.length} sub={demo ? '3 confirmadas · 1 pendiente' : `${todaySessions.length} agendadas`}
           onClick={() => setModal('sesiones')} />
         <ClickableStat label="Alumnos activos" value={clients.length} sub="en tu programa"
           color="gold" onClick={() => onNavigate('alumnos')} />
-        <ClickableStat label="Esta semana" value="12" sub="sesiones totales"
+        <ClickableStat label="Esta semana" value={demo ? 12 : weekSessions.length} sub="sesiones totales"
           color="blue" onClick={() => setModal('semana')} />
-        <ClickableStat label="Asistencia" value="94%" sub="↑ promedio mensual"
+        <ClickableStat label="Asistencia" value={demo ? '94%' : clients.length > 0 ? '—' : 'Sin datos'} sub="promedio mensual"
           onClick={() => setModal('asistencia')} />
       </div>
 
       <div className="g2" style={{ gap: 24 }}>
+        {/* Agenda de hoy — real o demo */}
         <div className="card cp">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <h2 className="card-title" style={{ marginBottom: 0 }}>Agenda de hoy</h2>
-            <span className="tag tg">4 sesiones</span>
+            <span className="tag tg">{demo ? 4 : todaySessions.length} sesiones</span>
           </div>
-          <div className="sg">
-            {DEMO_SCHED.map((s, i) => (
-              <>
-                <div className="ts" key={`t${i}`}>{s.time}</div>
-                <div className="ss" key={`s${i}`}>
-                  {s.status === 'available'
-                    ? <div className="sb avail" onClick={onNewSession}>+ Disponible</div>
-                    : <div className="sb booked">
-                        <div>
-                          <div style={{ fontWeight: 500, color: 'var(--accent)' }}>{s.client}</div>
-                          <div style={{ fontSize: 11, color: 'var(--ink2)', marginTop: 2 }}>{s.type}</div>
-                        </div>
-                        <span className={`sbadge ${s.status === 'confirmed' ? 'ok' : 'pend'}`}>
-                          {s.status === 'confirmed' ? 'Confirmado' : 'Pendiente'}
-                        </span>
-                      </div>}
-                </div>
-              </>
-            ))}
-          </div>
+          {demo ? (
+            <div className="sg">
+              {DEMO_SCHED.map((s, i) => (
+                <>
+                  <div className="ts" key={`t${i}`}>{s.time}</div>
+                  <div className="ss" key={`s${i}`}>
+                    {s.status === 'available'
+                      ? <div className="sb avail" onClick={onNewSession}>+ Disponible</div>
+                      : <div className="sb booked">
+                          <div>
+                            <div style={{ fontWeight: 500, color: 'var(--accent)' }}>{s.client}</div>
+                            <div style={{ fontSize: 11, color: 'var(--ink2)', marginTop: 2 }}>{s.type}</div>
+                          </div>
+                          <span className={`sbadge ${s.status === 'confirmed' ? 'ok' : 'pend'}`}>
+                            {s.status === 'confirmed' ? 'Confirmado' : 'Pendiente'}
+                          </span>
+                        </div>}
+                  </div>
+                </>
+              ))}
+            </div>
+          ) : todaySessions.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '28px 0', color: 'var(--ink2)' }}>
+              <div style={{ fontSize: 32, marginBottom: 10 }}>📅</div>
+              <p style={{ fontSize: 14, marginBottom: 12 }}>Sin sesiones para hoy</p>
+              <button className="btn btn-p btn-sm" onClick={onNewSession}>+ Agendar sesión</button>
+            </div>
+          ) : (
+            <div className="sg">
+              {todaySessions.map((s, i) => (
+                <>
+                  <div className="ts" key={`t${i}`}>{s.time?.slice(0,5)}</div>
+                  <div className="ss" key={`s${i}`}>
+                    <div className="sb booked">
+                      <div>
+                        <div style={{ fontWeight: 500, color: 'var(--accent)' }}>{s.client_email}</div>
+                        <div style={{ fontSize: 11, color: 'var(--ink2)', marginTop: 2 }}>{s.type}</div>
+                      </div>
+                      <span className="sbadge ok">Confirmado</span>
+                    </div>
+                  </div>
+                </>
+              ))}
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -262,7 +323,10 @@ export function TrainerDashboard({ profile, onNewSession, clients, onNavigate })
               <button className="btn btn-s btn-sm" onClick={() => onNavigate('alumnos')}>Ver todos</button>
             </div>
             {clients.length === 0
-              ? <p style={{ color: 'var(--ink2)', fontSize: 14 }}>Aún no tienes alumnos registrados.</p>
+              ? <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--ink2)' }}>
+                  <p style={{ fontSize: 14 }}>Aún no tienes alumnos registrados.</p>
+                  <p style={{ fontSize: 12, marginTop: 6 }}>Comparte tu código de gimnasio para que se unan.</p>
+                </div>
               : clients.slice(0, 4).map(c => (
                 <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                   <Avatar name={c.name} size={36} radius="10px" />
@@ -284,14 +348,6 @@ export function TrainerDashboard({ profile, onNewSession, clients, onNavigate })
             <p style={{ fontSize: 13, color: 'var(--ink2)', lineHeight: 1.5 }}>
               Consulta la disponibilidad de todos los entrenadores antes de agendar.
             </p>
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              {['Carlos','Sofía','Andrés'].map((t, i) => (
-                <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: TRAINER_COLORS[i] }} />
-                  {t}
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>
@@ -299,63 +355,80 @@ export function TrainerDashboard({ profile, onNewSession, clients, onNavigate })
       {/* ── Modales de detalle ── */}
       {modal === 'sesiones' && (
         <DetailModal title="Sesiones de hoy" onClose={() => setModal(null)}>
-          <div className="sg">
-            {DEMO_SCHED.filter(s => s.status !== 'available').map((s, i) => (
-              <>
-                <div className="ts" key={`t${i}`}>{s.time}</div>
-                <div className="ss" key={`s${i}`}>
-                  <div className="sb booked">
-                    <div>
-                      <div style={{ fontWeight: 500, color: 'var(--accent)' }}>{s.client}</div>
-                      <div style={{ fontSize: 11, color: 'var(--ink2)', marginTop: 2 }}>{s.type} · 60 min</div>
-                    </div>
-                    <span className={`sbadge ${s.status === 'confirmed' ? 'ok' : 'pend'}`}>
-                      {s.status === 'confirmed' ? 'Confirmado' : 'Pendiente'}
-                    </span>
-                  </div>
+          {(demo ? DEMO_SCHED.filter(s => s.status !== 'available') : todaySessions).length === 0
+            ? <p style={{ color: 'var(--ink2)', fontSize: 14, textAlign: 'center', padding: '20px 0' }}>Sin sesiones hoy.</p>
+            : demo
+              ? DEMO_SCHED.filter(s => s.status !== 'available').map((s, i) => (
+                <div key={i} style={{ display: 'flex', gap: 14, padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: 12, color: 'var(--ink2)', minWidth: 65 }}>{s.time}</span>
+                  <span style={{ fontWeight: 500, flex: 1 }}>{s.client}</span>
+                  <span className="chip">{s.type}</span>
                 </div>
-              </>
-            ))}
-          </div>
+              ))
+              : todaySessions.map((s, i) => (
+                <div key={i} style={{ display: 'flex', gap: 14, padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: 12, color: 'var(--ink2)', minWidth: 65 }}>{s.time?.slice(0,5)}</span>
+                  <span style={{ fontWeight: 500, flex: 1 }}>{s.client_email}</span>
+                  <span className="chip">{s.type}</span>
+                </div>
+              ))
+          }
         </DetailModal>
       )}
 
       {modal === 'semana' && (
         <DetailModal title="Sesiones esta semana" onClose={() => setModal(null)}>
-          {['Lunes 28', 'Martes 29', 'Miércoles 30', 'Jueves 31', 'Viernes 1'].map((d, di) => (
-            <div key={d} style={{ marginBottom: 16 }}>
-              <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: 'var(--accent)' }}>{d} Ene</div>
-              {DEMO_SCHED.filter(s => s.status !== 'available').slice(0, 2 + di % 2).map((s, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', background: 'var(--surface2)', borderRadius: 8, marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, color: 'var(--ink2)', minWidth: 60 }}>{s.time}</span>
-                  <span style={{ fontWeight: 500, fontSize: 13, flex: 1 }}>{s.client}</span>
+          {(demo ? null : weekSessions).length === 0 && !demo
+            ? <p style={{ color: 'var(--ink2)', fontSize: 14, textAlign: 'center', padding: '20px 0' }}>Sin sesiones esta semana.</p>
+            : demo
+              ? ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].map((d, di) => (
+                <div key={d} style={{ marginBottom: 16 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: 'var(--accent)' }}>{d}</div>
+                  {DEMO_SCHED.filter(s => s.status !== 'available').slice(0, 2 + di % 2).map((s, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 12, padding: '8px 12px', background: 'var(--surface2)', borderRadius: 8, marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, color: 'var(--ink2)', minWidth: 60 }}>{s.time}</span>
+                      <span style={{ fontWeight: 500, fontSize: 13, flex: 1 }}>{s.client}</span>
+                      <span className="chip">{s.type}</span>
+                    </div>
+                  ))}
+                </div>
+              ))
+              : weekSessions.map((s, i) => (
+                <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 12px', background: 'var(--surface2)', borderRadius: 8, marginBottom: 8 }}>
+                  <span style={{ fontSize: 11, color: 'var(--ink2)', minWidth: 90 }}>{s.date} {s.time?.slice(0,5)}</span>
+                  <span style={{ fontWeight: 500, fontSize: 13, flex: 1 }}>{s.client_email}</span>
                   <span className="chip">{s.type}</span>
                 </div>
-              ))}
-            </div>
-          ))}
+              ))
+          }
         </DetailModal>
       )}
 
       {modal === 'asistencia' && (
         <DetailModal title="Reporte de asistencia" onClose={() => setModal(null)}>
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <span style={{ fontSize: 13 }}>Promedio mensual</span>
-              <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--accent)' }}>94%</span>
-            </div>
-            <div className="prog-track"><div className="prog-fill" style={{ width: '94%' }} /></div>
-          </div>
-          {clients.length > 0 ? clients.map((c, i) => (
-            <div key={i} style={{ marginBottom: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 13, fontWeight: 500 }}>{c.name}</span>
-                <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600 }}>{85 + i * 4}%</span>
+          {demo ? (
+            <>
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 13 }}>Promedio mensual</span>
+                  <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--accent)' }}>94%</span>
+                </div>
+                <div className="prog-track"><div className="prog-fill" style={{ width: '94%' }} /></div>
               </div>
-              <div className="prog-track"><div className="prog-fill" style={{ width: `${85 + i * 4}%` }} /></div>
-            </div>
-          )) : (
-            <p style={{ color: 'var(--ink2)', fontSize: 14 }}>Sin datos de alumnos aún.</p>
+              {clients.slice(0, 3).map((c, i) => (
+                <div key={i} style={{ marginBottom: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 500 }}>{c.name}</span>
+                    <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600 }}>{85 + i * 4}%</span>
+                  </div>
+                  <div className="prog-track"><div className="prog-fill" style={{ width: `${85 + i * 4}%` }} /></div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <p style={{ color: 'var(--ink2)', fontSize: 14, textAlign: 'center', padding: '20px 0' }}>
+              Los reportes de asistencia estarán disponibles próximamente.
+            </p>
           )}
         </DetailModal>
       )}
