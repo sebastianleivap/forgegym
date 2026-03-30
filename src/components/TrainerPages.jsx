@@ -394,7 +394,7 @@ export function TrainerClients({ clients }) {
   )
 }
 
-export function TrainerSchedule({ onNew }) {
+export function TrainerSchedule({ onNew, sessions = [] }) {
   const [view, setView] = useState('personal')
   const [day, setDay] = useState(0)
 
@@ -406,13 +406,30 @@ export function TrainerSchedule({ onNew }) {
     const d = new Date(monday)
     d.setDate(monday.getDate() + i)
     const names = ['Lun','Mar','Mié','Jue','Vie','Sáb']
+    // Format date as YYYY-MM-DD for comparison
+    const dateStr = d.toISOString().split('T')[0]
     return {
       label: `${names[i]} ${d.getDate()}`,
       full: d.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' }),
       date: d,
+      dateStr,
     }
   })
-  const monthYear = weekDays[day].date.toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })
+
+  // Sesiones del día seleccionado desde Supabase
+  const selectedDate = weekDays[day].dateStr
+  const daySessions = sessions.filter(s => s.date === selectedDate)
+
+  // Horas del día
+  const HOURS = ['6:00','7:00','8:00','9:00','10:00','11:00','12:00','17:00','18:00','19:00','20:00']
+
+  const getSessionAtHour = (hour) => {
+    return daySessions.find(s => {
+      const sHour = s.time ? s.time.slice(0, 5) : ''
+      const hPad = hour.length === 4 ? '0' + hour : hour
+      return sHour === hPad || sHour === hour
+    })
+  }
 
   return (
     <div className="page">
@@ -441,28 +458,43 @@ export function TrainerSchedule({ onNew }) {
           <div className="card cp">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20, alignItems: 'center' }}>
               <h2 className="card-title" style={{ marginBottom: 0, textTransform: 'capitalize' }}>{weekDays[day].full}</h2>
-              <div style={{ display: 'flex', gap: 8 }}><span className="tag tg">4 sesiones</span><span className="tag ty">1 pendiente</span></div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <span className="tag tg">{daySessions.length} sesiones</span>
+              </div>
             </div>
-            <div className="sg">
-              {DEMO_SCHED.map((s, i) => (
-                <>
-                  <div className="ts" key={`t${i}`}>{s.time}</div>
-                  <div className="ss" key={`s${i}`}>
-                    {s.status === 'available'
-                      ? <div className="sb avail" onClick={onNew}>+ Agregar sesión</div>
-                      : <div className="sb booked">
-                          <div>
-                            <div style={{ fontWeight: 500, color: 'var(--accent)' }}>{s.client}</div>
-                            <div style={{ fontSize: 11, color: 'var(--ink2)', marginTop: 2 }}>{s.type} · 60 min</div>
+            {daySessions.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 20px', color: 'var(--ink2)' }}>
+                <div style={{ fontSize: 32, marginBottom: 10 }}>📅</div>
+                <p style={{ fontSize: 14, marginBottom: 12 }}>Sin sesiones agendadas para este día</p>
+                <button className="btn btn-p btn-sm" onClick={onNew}>+ Agendar sesión</button>
+              </div>
+            ) : (
+              <div className="sg">
+                {HOURS.map((hour, i) => {
+                  const sess = getSessionAtHour(hour)
+                  return (
+                    <>
+                      <div className="ts" key={`t${i}`}>{hour}</div>
+                      <div className="ss" key={`s${i}`}>
+                        {sess ? (
+                          <div className="sb booked">
+                            <div>
+                              <div style={{ fontWeight: 500, color: 'var(--accent)' }}>{sess.client_email}</div>
+                              <div style={{ fontSize: 11, color: 'var(--ink2)', marginTop: 2 }}>{sess.type} · {sess.notes || '60 min'}</div>
+                            </div>
+                            <span className={`sbadge ${sess.status === 'confirmed' ? 'ok' : 'pend'}`}>
+                              {sess.status === 'confirmed' ? 'Confirmado' : 'Pendiente'}
+                            </span>
                           </div>
-                          <span className={`sbadge ${s.status === 'confirmed' ? 'ok' : 'pend'}`}>
-                            {s.status === 'confirmed' ? 'Confirmado' : 'Pendiente'}
-                          </span>
-                        </div>}
-                  </div>
-                </>
-              ))}
-            </div>
+                        ) : (
+                          <div className="sb avail" onClick={onNew}>+ Disponible</div>
+                        )}
+                      </div>
+                    </>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </>
       )}
