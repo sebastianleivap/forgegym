@@ -149,6 +149,11 @@ export default function App() {
       // Cargar sesiones reales
       const { data: sess } = await supabase.from('sessions').select('*').eq('trainer_id', user.id).order('date', { ascending: true })
       setSessions(sess || [])
+      // Si es admin, cargar código del gimnasio
+      if (p?.role === 'admin' && p?.gym_id) {
+        const { data: gym } = await supabase.from('gyms').select('invite_code').eq('id', p.gym_id).single()
+        if (gym) setProfile(prev => ({ ...prev, gym_invite_code: gym.invite_code }))
+      }
       setNotifs(NOTIFS_T)
     } else {
       setNotifs(NOTIFS_S)
@@ -269,7 +274,7 @@ export default function App() {
       {/* ── MAIN ── */}
       <main className="main">
         {/* Trainer / Admin pages */}
-        {isTrainer && page === 'dashboard'    && <TrainerDashboard profile={profile} onNewSession={() => setShowSM(true)} clients={clients} onNavigate={setPage} />}
+        {isTrainer && page === 'dashboard'    && <TrainerDashboard profile={profile} onNewSession={() => setShowSM(true)} clients={clients} onNavigate={setPage} sessions={sessions} />}
         {isTrainer && page === 'alumnos'      && <TrainerClients clients={clients} />}
         {isTrainer && page === 'planificador' && <WorkoutPlanner profile={profile} clients={clients} />}
         {isTrainer && page === 'agenda'       && <TrainerSchedule onNew={() => setShowSM(true)} sessions={sessions} />}
