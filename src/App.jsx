@@ -32,7 +32,7 @@ function SessionModal({ onClose, onSave, profile }) {
     if (f.clientEmail) {
       try {
         // Intentar con Edge Function primero
-        const { error } = await supabase.functions.invoke('send-session-email', {
+        const { error } = await supabase.functions.invoke('dynamic-responder', {
           body: {
             studentEmail: f.clientEmail,
             studentName: f.client || f.clientEmail,
