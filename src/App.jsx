@@ -133,7 +133,14 @@ export default function App() {
 
   const loadProfile = async (user) => {
     setSession(user)
+    // Timeout de seguridad — si no carga en 6 segundos, cierra sesión
+    const timeout = setTimeout(async () => {
+      await supabase.auth.signOut()
+      setSession(null); setProfile(null); setLoading(false)
+    }, 6000)
+
     const { data: p, error } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+    clearTimeout(timeout)
     if (error || !p) {
       // Profile doesn't exist — log out and show auth screen
       await supabase.auth.signOut()
