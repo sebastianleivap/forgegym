@@ -133,7 +133,6 @@ export default function App() {
 
   const loadProfile = async (user) => {
     setSession(user)
-    // Timeout de seguridad — si no carga en 6 segundos, cierra sesión
     const timeout = setTimeout(async () => {
       await supabase.auth.signOut()
       setSession(null); setProfile(null); setLoading(false)
@@ -142,32 +141,26 @@ export default function App() {
     const { data: p, error } = await supabase.from('profiles').select('*').eq('id', user.id).single()
     clearTimeout(timeout)
     if (error || !p) {
-      // Profile doesn't exist — log out and show auth screen
       await supabase.auth.signOut()
-      setSession(null)
-      setProfile(null)
-      setLoading(false)
+      setSession(null); setProfile(null); setLoading(false)
       return
     }
-    setProfile(p)
+
     if (p?.role === 'trainer' || p?.role === 'admin') {
-      // Cargar alumnos SOLO del mismo gimnasio
-      const { data: cls } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'student')
-        .eq('gym_id', p.gym_id)
-      setClients(cls || [])
-      // Cargar sesiones reales
-      const { data: sess } = await supabase.from('sessions').select('*').eq('trainer_id', user.id).order('date', { ascending: true })
-      setSessions(sess || [])
-      // Cargar datos del gimnasio (código + nombre)
-      if (p?.gym_id) {
-        const { data: gym } = await supabase.from('gyms').select('invite_code, name').eq('id', p.gym_id).single()
-        if (gym) setProfile(prev => ({ ...prev, gym_invite_code: gym.invite_code, gym_name: gym.name }))
-      }
+      // Cargar todo en paralelo antes de setProfile
+      const [clsRes, sessRes, gymRes] = await Promise.all([
+        supabase.from('profiles').select('*').eq('role', 'student').eq('gym_id', p.gym_id),
+        supabase.from('sessions').select('*').eq('trainer_id', user.id).order('date', { ascending: true }),
+        p.gym_id ? supabase.from('gyms').select('invite_code, name').eq('id', p.gym_id).single() : { data: null }
+      ])
+      setClients(clsRes.data || [])
+      setSessions(sessRes.data || [])
+      // Setear perfil completo de una sola vez con el código del gimnasio
+      const gymData = gymRes.data
+      setProfile({ ...p, gym_invite_code: gymData?.invite_code, gym_name: gymData?.name })
       setNotifs(NOTIFS_T)
     } else {
+      setProfile(p)
       setNotifs(NOTIFS_S)
     }
     setLoading(false)
