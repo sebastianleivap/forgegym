@@ -5,7 +5,27 @@ export const initials = name => name ? name.split(' ').map(w => w[0]).join('').s
 export const avatarColor = name => COLORS[name ? name.charCodeAt(0) % COLORS.length : 0]
 
 export function Spinner() {
-  return <div className="spinner-wrap"><div className="spinner" /></div>
+  const handleExit = async () => {
+    const { createClient } = await import('@supabase/supabase-js')
+    const sb = createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_ANON_KEY
+    )
+    await sb.auth.signOut()
+    window.location.href = '/'
+  }
+  return (
+    <div className="spinner-wrap">
+      <div className="spinner" />
+      <button onClick={handleExit} style={{
+        marginTop: 32, background: 'none', border: '1px solid var(--border)',
+        borderRadius: 8, padding: '8px 16px', fontSize: 13, color: 'var(--ink2)',
+        cursor: 'pointer', fontFamily: 'DM Sans, sans-serif'
+      }}>
+        ¿Cargando demasiado? Salir
+      </button>
+    </div>
+  )
 }
 
 export function Toast({ msg, onDone }) {
