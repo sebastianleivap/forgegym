@@ -144,15 +144,20 @@ export default function App() {
     }
     setProfile(p)
     if (p?.role === 'trainer' || p?.role === 'admin') {
-      const { data: cls } = await supabase.from('profiles').select('*').eq('role', 'student')
+      // Cargar alumnos SOLO del mismo gimnasio
+      const { data: cls } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'student')
+        .eq('gym_id', p.gym_id)
       setClients(cls || [])
       // Cargar sesiones reales
       const { data: sess } = await supabase.from('sessions').select('*').eq('trainer_id', user.id).order('date', { ascending: true })
       setSessions(sess || [])
-      // Si es admin, cargar código del gimnasio
-      if (p?.role === 'admin' && p?.gym_id) {
-        const { data: gym } = await supabase.from('gyms').select('invite_code').eq('id', p.gym_id).single()
-        if (gym) setProfile(prev => ({ ...prev, gym_invite_code: gym.invite_code }))
+      // Cargar datos del gimnasio (código + nombre)
+      if (p?.gym_id) {
+        const { data: gym } = await supabase.from('gyms').select('invite_code, name').eq('id', p.gym_id).single()
+        if (gym) setProfile(prev => ({ ...prev, gym_invite_code: gym.invite_code, gym_name: gym.name }))
       }
       setNotifs(NOTIFS_T)
     } else {
